@@ -16,22 +16,25 @@
 # include <string>
 # include <map>
 
+struct btcdate {
+    int year;
+    int month;
+    int day;
+};
+
 class BitcoinExchange
 {
 private:
 
-    static const std::string        DATA_FILE;
+    static const std::string        DATA_FILE_NAME;
     static const std::string        DATA_FILE_DELEMITER;
     static const std::string        INPUT_FILE_DELEMITER;
-    static const double             INPUT_VALUE_MAX_LIMIT;
-    static const double             INPUT_VALUE_MIN_LIMIT;
+    static const double             INPUT_MAX_VALUE;
+    static const double             INPUT_MIN_VALUE;
 
-    std::map<std::string, double>   _data;
+    std::map<btcdate, double>   _data;
 
     void    loadData( void );
-    bool    isValidDate( const std::string & date );
-    bool    isValidAmount( const std::string & amount );
-    void    printExchange( const std::string date, double exchange );
 
 public:
 
@@ -41,7 +44,7 @@ public:
 
     BitcoinExchange & operator=( const BitcoinExchange & ref );
 
-    void findAmounts( const std::string & inputFile );
+    void run( const std::string & inputFile );
 };
 
 #endif

@@ -13,13 +13,14 @@
 #include "BitcoinExchange.hpp"
 #include <iostream>
 #include <fstream>
-#include <stdlib.h>
+#include <algorithm>
+#include <sstream>
 
-const std::string BitcoinExchange::DATA_FILE = "data.csv";
+const std::string BitcoinExchange::DATA_FILE_NAME = "data.csv";
 const std::string BitcoinExchange::DATA_FILE_DELEMITER = ",";
 const std::string BitcoinExchange::INPUT_FILE_DELEMITER = " | ";
-const double BitcoinExchange::INPUT_VALUE_MIN_LIMIT = 0;
-const double BitcoinExchange::INPUT_VALUE_MAX_LIMIT = 1000;
+const double BitcoinExchange::INPUT_MIN_VALUE = 0;
+const double BitcoinExchange::INPUT_MAX_VALUE = 1000;
 
 BitcoinExchange::BitcoinExchange( void )
 {
@@ -48,27 +49,109 @@ BitcoinExchange & BitcoinExchange::operator=( const BitcoinExchange & ref )
 
 void BitcoinExchange::loadData( void )
 {
-    std::ifstream file(DATA_FILE.c_str());
+    std::ifstream file(DATA_FILE_NAME.c_str());
     
     if(!file.is_open()) {
-        std::cout << "Error when reading data.csv file " << std::endl;
+        throw std::runtime_error("error when opening datebase file:" + DATA_FILE_NAME);
     }
     
+    size_t linecount = 0;
     std::string line;
-    std::string date;
-    std::string value;
-    size_t delemiterPos;
     
     while(std::getline(file, line))
     {
-        delemiterPos = line.find(DATA_FILE_DELEMITER);
-        date = line.substr(0, delemiterPos);
-        value = line.substr(delemiterPos + 1);
-        this->_data[date] = atof(value.c_str());
+        removeSpaces(line);
+        size_t delemiterPos = line.find(DATA_FILE_DELEMITER);
+
+        if (delemiterPos == std::string::npos) {
+            std::cout << "[database file] line: " << linecount << " => invalid line format: " << line << std::endl;
+            continue;
+        }
+
+        std::string dateStr = line.substr(0, delemiterPos);
+        std::string valueStr = line.substr(delemiterPos + 1);
+
+        btcdate date;
+        try {
+            date = parseDateStr(dateStr);
+        } catch(std::exception & e) {
+            std::cout << "[database file] line: " << linecount << " => invalid date format: " << line << std::endl;
+            continue;
+        }
+
+        double value;
+        try {
+            value = parseNumberStr(valueStr);
+        } catch(std::exception & e) {
+            std::cout << "[database file] line: " << linecount << " => invalid value format: " << line << std::endl;
+            continue;
+        }
+
+        this->_data[date] = value;
+        ++linecount;
     }
 
     file.close();
 }
+
+void removeSpaces(std::string & str) 
+{
+    str.erase(std::remove_if(str.begin(), str.end(), ::isspace), str.end());
+}
+
+bool isValidDate(btcdate & date)
+{
+    int monthDays[12] {
+        31, //jan
+        28, //feb
+        31, //mar
+        30, //apr
+        31, //may
+        30, //jun
+        31, //jul
+        31, //aug
+        30, //sep
+        31, //oct
+        30, //nov
+        31  //dec
+    };
+
+    if (date.year <= 0 || date.month <= 0  || date.day <= 0) { return false; }
+    if (date.month > 12) { return false; }
+    if (date.day > monthDays[date.month - 1]){ return false; }
+
+    return true;
+}
+
+btcdate parseDateStr(std::string & str)
+{
+    btcdate d;
+    char del[2];
+    char delemiter = '-';
+    std::istringstream stream(str);
+
+    stream >> d.year >> del[0] >> d.month >> del[1] >> d.day;
+
+    if (del[0] != delemiter || del[1] != delemiter || !stream.eof()) {
+        throw std::invalid_argument("invalid format");
+    }
+
+    return d;
+}
+
+double parseNumberStr(std::string & str)
+{
+    std::istringstream stream(str);
+    double number;
+
+    stream >> number;
+    if (!stream.eof()) {
+        throw std::invalid_argument("invalid format");
+    }
+
+    return number;
+}
+
 
 bool BitcoinExchange::isValidDate( const std::string & date )
 {
@@ -114,17 +197,17 @@ bool BitcoinExchange::isValidAmount( const std::string & amount )
 
     double amountDouble = atof(amount.c_str());
     
-    if (amountDouble < INPUT_VALUE_MIN_LIMIT) {
+    if (amountDouble < INPUT_MIN_VALUE) {
         std::cout 
             << "Error: number must be grater than " 
-            << INPUT_VALUE_MIN_LIMIT << " => " << amount << std::endl;
+            << INPUT_MIN_VALUE << " => " << amount << std::endl;
         return false;
     }
     
-    if (amountDouble > INPUT_VALUE_MAX_LIMIT) {
+    if (amountDouble > INPUT_MAX_VALUE) {
         std::cout 
             << "Error: number must be less than " 
-            << INPUT_VALUE_MAX_LIMIT << " => " << amount << std::endl;
+            << INPUT_MAX_VALUE << " => " << amount << std::endl;
         return false;
     }
 
