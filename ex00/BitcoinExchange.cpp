@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   BitcoinExchange.cpp                                :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: gasouza <gasouza@student.42sp.org.br >     +#+  +:+       +#+        */
+/*   By: gasouza <gasouza@student.42sp.org.br>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/31 17:25:47 by gasouza           #+#    #+#             */
-/*   Updated: 2024/03/31 18:39:53 by gasouza          ###   ########.fr       */
+/*   Updated: 2024/04/07 20:12:22 by gasouza          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,11 +17,23 @@
 #include <sstream>
 #include <exception>
 
+// -- Constants
+
 const std::string BitcoinExchange::DATA_FILE_NAME = "data.csv";
 const std::string BitcoinExchange::DATA_FILE_DELEMITER = ",";
 const std::string BitcoinExchange::INPUT_FILE_DELEMITER = "|";
 const double BitcoinExchange::INPUT_MIN_VALUE = 0;
 const double BitcoinExchange::INPUT_MAX_VALUE = 1000;
+
+// -- Helpers functions header
+
+void removeSpaces(std::string & str);
+bool isValidDate(BtcDate & date);
+BtcDate parseDateStr(std::string & str);
+double parseNumberStr(std::string & str);
+double findOnMap(BtcDate & date, std::map<BtcDate, double> & mapref);
+
+// --- BtcDate Struct
 
 bool BtcDate::operator<(const BtcDate &ref) const {
     if (year != ref.year) return year < ref.year;
@@ -42,6 +54,8 @@ bool BtcDate::operator==(const BtcDate &ref) const {
 bool BtcDate::operator!=(const BtcDate &ref) const {
     return year != ref.year || month != ref.month || day != ref.day;
 }
+
+// --- BitcoinExchange class
 
 BitcoinExchange::BitcoinExchange( void )
 {
@@ -67,25 +81,31 @@ BitcoinExchange & BitcoinExchange::operator=( const BitcoinExchange & ref )
     return *this;
 }
 
-
 void BitcoinExchange::loadData( void )
 {
     std::ifstream file(DATA_FILE_NAME.c_str());
     
     if(!file.is_open()) {
-        throw std::runtime_error("error when opening datebase file:" + DATA_FILE_NAME);
+        throw std::runtime_error("Error when opening [database] file: " + DATA_FILE_NAME);
     }
     
-    size_t lineCount = 0;
     std::string line;
     
-    while(std::getline(file, line))
+    for(size_t lineCount = 1; std::getline(file, line) ; lineCount++)
     {
         removeSpaces(line);
+        if (lineCount == 1 && line.compare("date,exchange_rate") == 0) {
+            continue;
+        }
+
+        if (line.size() == 0) {
+            continue;
+        }
+
         size_t delemiterPos = line.find(DATA_FILE_DELEMITER);
 
         if (delemiterPos == std::string::npos) {
-            std::cout << "[database file] line: " << lineCount << " => invalid line format: " << line << std::endl;
+            std::cout << "[database] file Error on line: " << lineCount << " => invalid line format" << std::endl;
             continue;
         }
 
@@ -95,8 +115,12 @@ void BitcoinExchange::loadData( void )
         BtcDate date;
         try {
             date = parseDateStr(dateStr);
+            if (!isValidDate(date)) {
+                std::cout << "[database] file Error on line: " << lineCount << " => invalid date value" << std::endl;
+                continue;
+            }
         } catch(std::exception & e) {
-            std::cout << "[database file] line: " << lineCount << " => invalid date format: " << line << std::endl;
+            std::cout << "[database] file Error on line: " << lineCount << " => invalid date format" << std::endl;
             continue;
         }
 
@@ -104,12 +128,11 @@ void BitcoinExchange::loadData( void )
         try {
             value = parseNumberStr(valueStr);
         } catch(std::exception & e) {
-            std::cout << "[database file] line: " << lineCount << " => invalid value format: " << line << std::endl;
+            std::cout << "[database] file Error on line: " << lineCount << " => invalid value format" << std::endl;
             continue;
         }
 
         this->_data[date] = value;
-        ++lineCount;
     }
 
     file.close();
@@ -120,19 +143,26 @@ void BitcoinExchange::run( const std::string & inputFile )
     std::ifstream file(inputFile.c_str());
     
     if(!file.is_open()) {
-        throw std::runtime_error("error when opening input file: " + inputFile);
+        throw std::runtime_error("Error when opening [input] file: " + inputFile);
     }
     
-    size_t lineCount = 0;
     std::string line;
 
-    while(std::getline(file, line))
+    for(size_t lineCount = 1; std::getline(file, line) ; lineCount++)
     {
         removeSpaces(line);
+        if (lineCount == 1 && line.compare("date|value") == 0) {
+            continue;
+        }
+
+        if (line.size() == 0) {
+            continue;
+        }
+
         size_t delemiterPos = line.find(INPUT_FILE_DELEMITER);
 
         if (delemiterPos == std::string::npos) {
-            std::cout << "[input file] line: " << lineCount << " => invalid line format: " << line << std::endl;
+            std::cout << "[input] file Error on line: " << lineCount << " => invalid line format" << std::endl;
             continue;
         }
 
@@ -142,8 +172,12 @@ void BitcoinExchange::run( const std::string & inputFile )
         BtcDate date;
         try {
             date = parseDateStr(dateStr);
+            if (!isValidDate(date)) {
+                std::cout << "[input] file Error on line: " << lineCount << " => invalid date value" << std::endl;
+                continue;
+            }
         } catch(std::exception & e) {
-            std::cout << "[input file] line: " << lineCount << " => invalid date format: " << line << std::endl;
+            std::cout << "[input] file Error on line: " << lineCount << " => invalid date format" << std::endl;
             continue;
         }
 
@@ -151,17 +185,17 @@ void BitcoinExchange::run( const std::string & inputFile )
         try {
             amount = parseNumberStr(amountStr);
         } catch(std::exception & e) {
-            std::cout << "[input file] line: " << lineCount << " => invalid amount format: " << line << std::endl;
+            std::cout << "[input] file Error on line: " << lineCount << " => invalid amount format" << std::endl;
             continue;
         }
 
         if (amount < INPUT_MIN_VALUE) {
-            std::cout << "[input file] line: " << lineCount << " => amount is less than minimum allowed: " << line << std::endl;
+            std::cout << "[input] file Error on line: " << lineCount << " => amount is less than minimum allowed" << std::endl;
             continue;
         }
 
         if (amount > INPUT_MAX_VALUE) {
-            std::cout << "[input file] line: " << lineCount << " => value is greater than maximum allowed: " << line << std::endl;
+            std::cout << "[input] file Error on line: " << lineCount << " => amount is greater than maximum allowed" << std::endl;
             continue;
         }
         
@@ -170,7 +204,7 @@ void BitcoinExchange::run( const std::string & inputFile )
         try {
             value = findOnMap(date, this->_data) * amount;
         } catch (std::exception & e) {
-            std::cout << "[input file] line: " << lineCount << " => " << e.what() << std::endl;
+            std::cout << "[input] file Error on line: " << lineCount << " => " << e.what() << std::endl;
         }
 
         std::cout << dateStr << " => " << amountStr << " = " << value << std::endl;
@@ -179,7 +213,6 @@ void BitcoinExchange::run( const std::string & inputFile )
     file.close();
 }
 
-
 void removeSpaces(std::string & str) 
 {
     str.erase(std::remove_if(str.begin(), str.end(), ::isspace), str.end());
@@ -187,7 +220,7 @@ void removeSpaces(std::string & str)
 
 bool isValidDate(BtcDate & date)
 {
-    int monthDays[12] {
+    int monthDays[12] = {
         31, //jan
         28, //feb
         31, //mar
@@ -231,7 +264,7 @@ double parseNumberStr(std::string & str)
     double number;
 
     stream >> number;
-    if (!stream.eof()) {
+    if (!stream.eof() || str.size() == 0) {
         throw std::invalid_argument("invalid format");
     }
 

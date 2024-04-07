@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   BitcoinExchange.hpp                                :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: gasouza <gasouza@student.42sp.org.br >     +#+  +:+       +#+        */
+/*   By: gasouza <gasouza@student.42sp.org.br>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/31 17:21:39 by gasouza           #+#    #+#             */
-/*   Updated: 2024/03/31 18:21:25 by gasouza          ###   ########.fr       */
+/*   Updated: 2024/04/07 20:03:11 by gasouza          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,11 +32,11 @@ class BitcoinExchange
 {
 private:
 
-    static const std::string        DATA_FILE_NAME;
-    static const std::string        DATA_FILE_DELEMITER;
-    static const std::string        INPUT_FILE_DELEMITER;
-    static const double             INPUT_MAX_VALUE;
-    static const double             INPUT_MIN_VALUE;
+    static const std::string    DATA_FILE_NAME;
+    static const std::string    DATA_FILE_DELEMITER;
+    static const std::string    INPUT_FILE_DELEMITER;
+    static const double         INPUT_MAX_VALUE;
+    static const double         INPUT_MIN_VALUE;
 
     std::map<BtcDate, double>   _data;
 
@@ -46,7 +46,7 @@ public:
 
     BitcoinExchange( void );
     BitcoinExchange( const BitcoinExchange & ref );
-    ~BitcoinExchange();
+    ~BitcoinExchange( void );
 
     BitcoinExchange & operator=( const BitcoinExchange & ref );
 
