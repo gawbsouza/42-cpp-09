@@ -6,7 +6,7 @@
 
 using namespace std;
 
-struct btcdate {
+struct BtcDate {
     int year;
     int month;
     int day;
@@ -19,9 +19,9 @@ std::string removeSpaces(std::string str)
     return str;
 }
 
-btcdate parseString(std::string & str, char delemiter)
+BtcDate parseString(std::string & str, char delemiter)
 {
-    btcdate d;
+    BtcDate d;
     char del[2];
     std::istringstream stream(str);
 
@@ -47,7 +47,7 @@ double parseNumber(std::string & str)
     return number;
 }
 
-bool isValidDate(btcdate & date)
+bool isValidDate(BtcDate & date)
 {
     int monthDays[12] {
         31, //jan

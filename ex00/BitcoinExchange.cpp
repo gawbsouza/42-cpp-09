@@ -15,12 +15,33 @@
 #include <fstream>
 #include <algorithm>
 #include <sstream>
+#include <exception>
 
 const std::string BitcoinExchange::DATA_FILE_NAME = "data.csv";
 const std::string BitcoinExchange::DATA_FILE_DELEMITER = ",";
-const std::string BitcoinExchange::INPUT_FILE_DELEMITER = " | ";
+const std::string BitcoinExchange::INPUT_FILE_DELEMITER = "|";
 const double BitcoinExchange::INPUT_MIN_VALUE = 0;
 const double BitcoinExchange::INPUT_MAX_VALUE = 1000;
+
+bool BtcDate::operator<(const BtcDate &ref) const {
+    if (year != ref.year) return year < ref.year;
+    if (month != ref.month) return month < ref.month;
+    return day < ref.day;
+}
+
+bool BtcDate::operator>(const BtcDate &ref) const {
+    if (year != ref.year) return year > ref.year;
+    if (month != ref.month) return month > ref.month;
+    return day > ref.day;
+}
+
+bool BtcDate::operator==(const BtcDate &ref) const {
+    return year == ref.year && month == ref.month && day == ref.day;
+}
+
+bool BtcDate::operator!=(const BtcDate &ref) const {
+    return year != ref.year || month != ref.month || day != ref.day;
+}
 
 BitcoinExchange::BitcoinExchange( void )
 {
@@ -55,7 +76,7 @@ void BitcoinExchange::loadData( void )
         throw std::runtime_error("error when opening datebase file:" + DATA_FILE_NAME);
     }
     
-    size_t linecount = 0;
+    size_t lineCount = 0;
     std::string line;
     
     while(std::getline(file, line))
@@ -64,18 +85,18 @@ void BitcoinExchange::loadData( void )
         size_t delemiterPos = line.find(DATA_FILE_DELEMITER);
 
         if (delemiterPos == std::string::npos) {
-            std::cout << "[database file] line: " << linecount << " => invalid line format: " << line << std::endl;
+            std::cout << "[database file] line: " << lineCount << " => invalid line format: " << line << std::endl;
             continue;
         }
 
         std::string dateStr = line.substr(0, delemiterPos);
         std::string valueStr = line.substr(delemiterPos + 1);
 
-        btcdate date;
+        BtcDate date;
         try {
             date = parseDateStr(dateStr);
         } catch(std::exception & e) {
-            std::cout << "[database file] line: " << linecount << " => invalid date format: " << line << std::endl;
+            std::cout << "[database file] line: " << lineCount << " => invalid date format: " << line << std::endl;
             continue;
         }
 
@@ -83,23 +104,88 @@ void BitcoinExchange::loadData( void )
         try {
             value = parseNumberStr(valueStr);
         } catch(std::exception & e) {
-            std::cout << "[database file] line: " << linecount << " => invalid value format: " << line << std::endl;
+            std::cout << "[database file] line: " << lineCount << " => invalid value format: " << line << std::endl;
             continue;
         }
 
         this->_data[date] = value;
-        ++linecount;
+        ++lineCount;
     }
 
     file.close();
 }
+
+void BitcoinExchange::run( const std::string & inputFile )
+{
+    std::ifstream file(inputFile.c_str());
+    
+    if(!file.is_open()) {
+        throw std::runtime_error("error when opening input file: " + inputFile);
+    }
+    
+    size_t lineCount = 0;
+    std::string line;
+
+    while(std::getline(file, line))
+    {
+        removeSpaces(line);
+        size_t delemiterPos = line.find(INPUT_FILE_DELEMITER);
+
+        if (delemiterPos == std::string::npos) {
+            std::cout << "[input file] line: " << lineCount << " => invalid line format: " << line << std::endl;
+            continue;
+        }
+
+        std::string dateStr = line.substr(0, delemiterPos);
+        std::string amountStr = line.substr(delemiterPos + 1);
+
+        BtcDate date;
+        try {
+            date = parseDateStr(dateStr);
+        } catch(std::exception & e) {
+            std::cout << "[input file] line: " << lineCount << " => invalid date format: " << line << std::endl;
+            continue;
+        }
+
+        double amount;
+        try {
+            amount = parseNumberStr(amountStr);
+        } catch(std::exception & e) {
+            std::cout << "[input file] line: " << lineCount << " => invalid amount format: " << line << std::endl;
+            continue;
+        }
+
+        if (amount < INPUT_MIN_VALUE) {
+            std::cout << "[input file] line: " << lineCount << " => amount is less than minimum allowed: " << line << std::endl;
+            continue;
+        }
+
+        if (amount > INPUT_MAX_VALUE) {
+            std::cout << "[input file] line: " << lineCount << " => value is greater than maximum allowed: " << line << std::endl;
+            continue;
+        }
+        
+        double value;
+  
+        try {
+            value = findOnMap(date, this->_data) * amount;
+        } catch (std::exception & e) {
+            std::cout << "[input file] line: " << lineCount << " => " << e.what() << std::endl;
+        }
+
+        std::cout << dateStr << " => " << amountStr << " = " << value << std::endl;
+    }
+
+    file.close();
+}
+
 
 void removeSpaces(std::string & str) 
 {
     str.erase(std::remove_if(str.begin(), str.end(), ::isspace), str.end());
 }
 
-bool isValidDate(btcdate & date)
+bool isValidDate(BtcDate & date)
 {
     int monthDays[12] {
         31, //jan
@@ -123,9 +209,9 @@ bool isValidDate(btcdate & date)
     return true;
 }
 
-btcdate parseDateStr(std::string & str)
+BtcDate parseDateStr(std::string & str)
 {
-    btcdate d;
+    BtcDate d;
     char del[2];
     char delemiter = '-';
     std::istringstream stream(str);
@@ -152,104 +238,17 @@ double parseNumberStr(std::string & str)
     return number;
 }
 
-
-bool BitcoinExchange::isValidDate( const std::string & date )
+double findOnMap(BtcDate & date, std::map<BtcDate, double> & mapref)
 {
-    std::string year;
-    std::string month;
-    std::string day;
+    std::map<BtcDate, double>::iterator foundAt;
 
-    size_t yearAt = date.find("-");
-    size_t monthAt = date.find("-", yearAt + 1);
-    // size_t dayAt = date.find("-", monthAt + 1);
+    foundAt = mapref.upper_bound(date);
 
-    if (
-        yearAt  == std::string::npos ||
-        monthAt == std::string::npos
-        // dayAt   == std::string::npos
-    ){
-        std::cout << "Error: bad date value => " << date << std::endl;
-        return false;
+    if (foundAt == mapref.end() || (foundAt->first != date && foundAt == mapref.begin())) { 
+        return 0;
     }
 
-    year = date.substr(0, yearAt);
-    month = date.substr(yearAt + 1, monthAt);
-    day = date.substr(monthAt + 1);
+    if (foundAt->first != date) { foundAt--; }
 
-    int yearInt = atoi(year.c_str());
-    int monthInt = atoi(month.c_str());
-    int dayInt = atoi(day.c_str());
-    
-    if (
-        (yearInt < 2000 || yearInt > 2050) ||
-        (monthInt < 1   || monthInt > 12)  ||
-        (dayInt < 1     || dayInt > 31)
-    ){
-        std::cout << "Error: bad date value => " << date << std::endl;
-        return false;
-    }
-
-    return true;
-}
-
-bool BitcoinExchange::isValidAmount( const std::string & amount )
-{
-
-    double amountDouble = atof(amount.c_str());
-    
-    if (amountDouble < INPUT_MIN_VALUE) {
-        std::cout 
-            << "Error: number must be grater than " 
-            << INPUT_MIN_VALUE << " => " << amount << std::endl;
-        return false;
-    }
-    
-    if (amountDouble > INPUT_MAX_VALUE) {
-        std::cout 
-            << "Error: number must be less than " 
-            << INPUT_MAX_VALUE << " => " << amount << std::endl;
-        return false;
-    }
-
-    return true;
-}
-
-void BitcoinExchange::printExchange( const std::string date, double exchange )
-{
-    std::cout << date << " : " << exchange << std::endl;
-}
-
-void BitcoinExchange::findAmounts( const std::string & inputFile )
-{
-    std::ifstream file(inputFile.c_str());
-    
-    if(!file.is_open()) {
-        std::cout << "Error when reading file: " << file << std::endl;
-        return;
-    }
-    
-    std::string line;
-
-    while(std::getline(file, line))
-    {
-        size_t delemiterPos = line.find(INPUT_FILE_DELEMITER);
-        if (delemiterPos == std::string::npos) {
-            std::cout << "Error: bad input => " << line << std::endl;
-            continue;
-        }
-        
-        if (line.compare("date | value") == 0) continue;
-        
-        std::string date = line.substr(0, delemiterPos);
-        std::string amount = line.substr(delemiterPos + INPUT_FILE_DELEMITER.size());
-        
-        if (!this->isValidDate(date)) continue;
-        if (!this->isValidAmount(amount)) continue;
-
-        double amountDouble = atof(amount.c_str());
-        
-        this->printExchange(date, amountDouble);
-    }
-
-    file.close();
+    return foundAt->second;
 }

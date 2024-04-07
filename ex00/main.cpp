@@ -18,7 +18,7 @@ int main()
     
     BitcoinExchange btc;
 
-    btc.findAmounts("teste.txt");
+    btc.run("teste.txt");
 
     return 0;
     

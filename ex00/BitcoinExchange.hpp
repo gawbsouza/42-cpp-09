@@ -16,10 +16,16 @@
 # include <string>
 # include <map>
 
-struct btcdate {
+struct BtcDate
+{
     int year;
     int month;
     int day;
+
+    bool operator<( const BtcDate &ref ) const;
+    bool operator>( const BtcDate &ref ) const;
+    bool operator==( const BtcDate &ref ) const;
+    bool operator!=( const BtcDate &ref ) const;
 };
 
 class BitcoinExchange
@@ -32,7 +38,7 @@ private:
     static const double             INPUT_MAX_VALUE;
     static const double             INPUT_MIN_VALUE;
 
-    std::map<btcdate, double>   _data;
+    std::map<BtcDate, double>   _data;
 
     void    loadData( void );
 
