@@ -45,5 +45,7 @@
         "stdexcept": "cpp",
         "streambuf": "cpp",
         "typeinfo": "cpp"
-    }
+    },
+    "42header.email": "gasouza@student.42sp.org.br",
+    "42header.username": "gasouza"
 }
