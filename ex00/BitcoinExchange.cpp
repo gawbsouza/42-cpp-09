@@ -6,7 +6,7 @@
 /*   By: gasouza <gasouza@student.42sp.org.br>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/31 17:25:47 by gasouza           #+#    #+#             */
-/*   Updated: 2024/04/07 20:12:22 by gasouza          ###   ########.fr       */
+/*   Updated: 2024/04/09 03:17:31 by gasouza          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -205,6 +205,7 @@ void BitcoinExchange::run( const std::string & inputFile )
             value = findOnMap(date, this->_data) * amount;
         } catch (std::exception & e) {
             std::cout << "[input] file Error on line: " << lineCount << " => " << e.what() << std::endl;
+			continue;
         }
 
         std::cout << dateStr << " => " << amountStr << " = " << value << std::endl;
@@ -278,7 +279,7 @@ double findOnMap(BtcDate & date, std::map<BtcDate, double> & mapref)
     foundAt = mapref.upper_bound(date);
 
     if (foundAt == mapref.end() || (foundAt->first != date && foundAt == mapref.begin())) { 
-        return 0;
+        throw std::runtime_error("no value available for date");
     }
 
     if (foundAt->first != date) { foundAt--; }
