@@ -6,15 +6,15 @@
 #    By: gasouza <gasouza@student.42sp.org.br>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/01/15 20:42:57 by gasouza           #+#    #+#              #
-#    Updated: 2024/04/07 23:47:26 by gasouza          ###   ########.fr        #
+#    Updated: 2024/04/09 01:06:33 by gasouza          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
-NAME		= RPN
-SRCS		= main.cpp RPN.cpp
+NAME		= PmergeMe
+SRCS		= main.cpp PmergeMe.cpp
 
 COMPILER 	= c++
-CFLAGS		= -Wall -Werror -Wextra -std=c++98 -g
+CFLAGS		= -Wall -Werror -Wextra -std=c++98
 CLEANUP		= rm -rf
 
 
